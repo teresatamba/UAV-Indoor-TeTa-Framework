@@ -1,0 +1,53 @@
+<launch>
+  <!-- ===================== GENERAL ARGUMENTS ===================== -->
+  <arg name="paused" value="false"/>
+  <arg name="verbose" value="false"/>
+  <arg name="use_sim_time" value="true"/>
+  <arg name="debug" value="false"/>
+
+  <!-- ===================== WORLD SELECTION ===================== -->
+  <arg name="world_name" value="$(find uav_simulator)/worlds/floorplan2/floorplan2_static.world"/>
+
+  <!-- ===================== LAUNCH THE WORLD ===================== -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="world_name" value="$(arg world_name)"/>
+    <arg name="verbose" value="$(arg verbose)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+  <!-- ===================== ROBOT DESCRIPTION ===================== -->
+  <param name="robot_description" command="cat '$(find uav_simulator)/urdf/quadcopter.urdf'"/>
+
+  <!-- ===================== SPAWN ROBOT ===================== -->
+  <node name="spawn_gazebo_model" pkg="gazebo_ros" type="spawn_model"
+        args="-urdf -param robot_description -model quadcopter -x 0.0 -y 0.0 -z 0.1 -Y 0.0"
+        respawn="false"/>
+
+  <!-- ===================== THROTTLE TOPICS ===================== -->
+  <node pkg="topic_tools" type="throttle" name="gt_pose_throttle"
+        args="messages /CERLAB/quadcopter/pose_raw 30 /CERLAB/quadcopter/pose"/>
+  <node pkg="topic_tools" type="throttle" name="gt_vel_throttle"
+        args="messages /CERLAB/quadcopter/vel_raw 30 /CERLAB/quadcopter/vel"/>
+  <node pkg="topic_tools" type="throttle" name="gt_acc_throttle"
+        args="messages /CERLAB/quadcopter/acc_raw 30 /CERLAB/quadcopter/acc"/>
+  <node pkg="topic_tools" type="throttle" name="gt_odom_throttle"
+        args="messages /CERLAB/quadcopter/odom_raw 30 /CERLAB/quadcopter/odom"/>
+
+  <!-- ===================== TF SETUP ===================== -->
+  <include file="$(find uav_simulator)/launch/setupTF.launch">
+    <arg name="pose_topic" value="/CERLAB/quadcopter/pose"/>
+  </include>
+
+  <!-- ===================== TAKEOFF AND HOVER ===================== -->
+  <!-- Path YAML diperbarui sesuai lokasi flight_base.yaml -->
+  <rosparam file="$(find autonomous_flight)/cfg/takeoff_and_hover/flight_base.yaml" command="load"/>
+ <node name="takeoff_and_hover_node" pkg="uav_simulator" type="simple_takeoff_node.py" output="screen">
+    <param name="takeoff_height" value="1.0"/>
+</node>
+
+
+  <!-- ===================== OPTIONAL RVIZ ===================== -->
+  <!-- <include file="$(find uav_simulator)/launch/rviz.launch"/> -->
+</launch>
